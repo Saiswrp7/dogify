@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dogify · Team Sober Hathi</title>
+<meta name="description" content="Be there for your dog, from anywhere. A hackathon build by Team Sober Hathi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=DM+Sans:opsz,wght@9..40,400;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root { --paper: #efeee9; --ink: #161616; --soft: #6b6a66; --yellow: #f5c518; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "DM Sans", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 56px 24px 80px; }
+  .kicker { font-family: "Gochi Hand", cursive; font-size: 22px; color: var(--soft); }
+  h1 { font-size: 72px; line-height: 1; margin: 6px 0 10px; letter-spacing: -.03em; }
+  .tag { font-family: "Gochi Hand", cursive; font-size: 28px; margin: 0 0 32px; }
+  .mark { background: linear-gradient(transparent 58%, var(--yellow) 58%, var(--yellow) 88%, transparent 88%); }
+  video { width: 100%; border: 2.6px solid var(--ink); border-radius: 18px; background: #000; display: block; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; margin: 28px 0 40px; }
+  a.btn { text-decoration: none; color: var(--ink); border: 2.6px solid var(--ink); border-radius: 999px; padding: 12px 22px;
+          font-weight: 700; background: #fff; }
+  a.btn:hover, a.btn.main { background: var(--yellow); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .card { border: 2.6px solid var(--ink); border-radius: 18px; padding: 18px 20px; background: rgba(255,255,255,.6); }
+  .card h3 { margin: 0 0 6px; }
+  .card p { margin: 0; color: #333; }
+  footer { margin-top: 48px; font-family: "Gochi Hand", cursive; font-size: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Team Sober Hathi presents</div>
+  <h1>Dogify</h1>
+  <p class="tag">Be there for your dog, <span class="mark">from anywhere</span>.</p>
+
+  <video src="media/dogify_demo.mp4" controls playsinline preload="metadata" poster="deck/img/dinesh_yawn.jpg"></video>
+
+  <div class="row">
+    <a class="btn main" href="deck/">▶ Open the pitch deck</a>
+    <a class="btn" href="deck/Dogify_SoberHathi.pptx" download>⬇ PowerPoint</a>
+    <a class="btn" href="deck/Dogify_SoberHathi.pdf">⬇ PDF</a>
+    <a class="btn" href="media/dogify_demo.mp4" download>⬇ Video</a>
+    <a class="btn" href="https://github.com/Saiswrp7/dogify">GitHub</a>
+  </div>
+
+  <div class="cards">
+    <div class="card"><h3>🐶 For the dog</h3><p>Left alone, dogs can panic within minutes. Dogify notices, and helps.</p></div>
+    <div class="card"><h3>🧑 For the owner</h3><p>Ravi can't be home, but from rehearsal he can send a voice note, a video, a treat, or a toy.</p></div>
+    <div class="card"><h3>✋ Owner decides</h3><p>The AI watches and tells. Every action is the owner's choice.</p></div>
+  </div>
+
+  <footer>Almost as wild as a drunken elephant. Just sober. 🐘</footer>
+</main>
+</body>
+</html>

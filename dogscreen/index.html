@@ -1,0 +1,194 @@
+<!doctype html>
+<!-- Dog-side screen. The brain writes now.json when it acts; this page shows it to the dog.
+     Run:  python -m http.server 8000 -d dogscreen   then open http://localhost:8000
+     Keys for demos: 1 = voice, 2 = treat, 3 = ball, 4 = owner video, 0 = idle.
+     Dogs see blue and yellow best (red and green look grey to them), so only those are used. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dog screen</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05070d; overflow: hidden; cursor: none;
+               font-family: -apple-system, system-ui, sans-serif; }
+  .scene { position: fixed; inset: 0; opacity: 0; transition: opacity 1.2s ease; display: grid; place-items: center; }
+  .scene.on { opacity: 1; }
+
+  /* idle: nearly dark, one slow breathing glow so the screen isn't a black mirror */
+  #idle .glow { width: 28vmin; height: 28vmin; border-radius: 50%; background: #1b2a55;
+                filter: blur(30px); animation: breathe 8s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.35); opacity: .55; } }
+
+  /* voice: the owner's face, big */
+  #voice { background: #0c1a3d; }
+  #voice img { max-width: 92vw; max-height: 92vh; border-radius: 4vmin; border: 1.5vmin solid #f5c518;
+               animation: pulse 2.4s ease-in-out infinite; }
+  #voice .noimg { width: 60vmin; height: 60vmin; border-radius: 50%; background: #f5c518; }
+  @keyframes pulse { 50% { transform: scale(1.03); } }
+
+  /* video: the owner's Telegram video, full screen with sound */
+  #video { background: #000; }
+  #video video { width: 100vw; height: 100vh; object-fit: contain; }
+
+  /* treat: warm yellow that fades in slowly (a sudden flash can startle an anxious dog) */
+  #treat { background: #e9c75a; transition: opacity 2s ease; }
+  #treat .bone { font-size: 40vmin; animation: settle 2s ease-out; }
+  @keyframes settle { from { transform: scale(.85); opacity: .3; } }
+
+  /* ball: yellow ball rolls across blue */
+  #ball { background: #1f4fd1; }
+  #ball .b { position: absolute; top: 50%; width: 30vmin; height: 30vmin; margin-top: -15vmin; border-radius: 50%;
+             background: radial-gradient(circle at 35% 35%, #fff3a0, #f5c518 55%, #c79a00);
+             animation: roll 6s ease-out forwards; }
+  /* rolls in from the left and stops at the right edge: put the ball exit on the right of the screen */
+  @keyframes roll { from { left: -35vmin; transform: rotate(0); } to { left: calc(100vw - 38vmin); transform: rotate(900deg); } }
+
+  /* demo buttons: appear when a person moves the mouse or touches, hide after 4 s so the dog never sees them */
+  #demo { position: fixed; bottom: 5vmin; left: 50%; transform: translateX(-50%); display: flex; gap: 2.5vmin;
+          opacity: 0; pointer-events: none; transition: opacity .4s; z-index: 5; }
+  body.awake { cursor: auto; }
+  body.awake #demo { opacity: 1; pointer-events: auto; }
+  #demo button { font: 600 3.2vmin -apple-system, system-ui, sans-serif; padding: 2.2vmin 4.5vmin; border: 0;
+                 border-radius: 3vmin; background: #e8edff; color: #0c1a3d; cursor: pointer; }
+  #demo button:active { transform: scale(.96); }
+
+  #start { position: fixed; inset: 0; display: grid; place-items: center; background: #05070d; color: #8fa3d9;
+           font-size: 5vmin; cursor: pointer; z-index: 9; text-align: center; }
+  #start small { display: block; font-size: 2.4vmin; margin-top: 2vmin; color: #55648c; }
+</style>
+</head>
+<body>
+<div id="idle"  class="scene on"><div class="glow"></div></div>
+<div id="voice" class="scene"><img src="owner.jpg" alt="" onerror="this.outerHTML='<div class=noimg></div>'"></div>
+<div id="video" class="scene"><video id="ownerVideo" playsinline></video></div>
+<div id="treat" class="scene"><div class="bone">🦴</div></div>
+<div id="ball"  class="scene"><div class="b"></div></div>
+<div id="demo">
+  <button data-scene="voice">🔊 Voice</button>
+  <button data-scene="treat">🦴 Treat</button>
+  <button data-scene="ball">🎾 Ball</button>
+  <button data-scene="video">📹 Video</button>
+</div>
+<div id="start"><div>Tap to start the dog screen<small>Move the mouse or touch the screen any time to show demo buttons.</small></div></div>
+
+<script>
+const SHOW_FOR = { voice: 12000, treat: 6000, ball: 9000, video: 120000 };  // ms before fading back to idle
+let lastId = null, timer = null, audio = null;
+
+function show(name) {
+  document.querySelectorAll(".scene").forEach(s => s.classList.toggle("on", s.id === name));
+  clearTimeout(timer);
+  if (name === "treat") { chime(); setTimeout(crinkle, 700); }
+  if (name === "ball") [0, 900, 1800].forEach(ms => setTimeout(squeak, ms));
+  const v = document.getElementById("ownerVideo");
+  if (name === "video") {
+    v.src = "owner_video.mp4?" + Date.now();   // always the newest video the owner sent
+    v.onended = () => show("idle");
+    v.play().catch(() => show("idle"));        // no video yet, or sound not unlocked
+  } else { v.pause(); }
+  if (SHOW_FOR[name]) timer = setTimeout(() => show("idle"), SHOW_FOR[name]);
+}
+
+// Two soft rising notes: the "good dog" marker played right before a treat drops.
+function chime() {
+  if (!audio) return;
+  [[660, 0], [880, 0.18]].forEach(([freq, at]) => {
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, audio.currentTime + at);
+    gain.gain.exponentialRampToValueAtTime(0.4, audio.currentTime + at + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + at + 0.5);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(audio.currentTime + at); osc.stop(audio.currentTime + at + 0.55);
+  });
+}
+
+// Treat-bag crinkle: short bursts of filtered noise.
+function crinkle() {
+  if (!audio) return;
+  const len = audio.sampleRate * 0.5, buf = audio.createBuffer(1, len, audio.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() < 0.08 ? 1 : 0.15);
+  const src = audio.createBufferSource(), band = audio.createBiquadFilter(), gain = audio.createGain();
+  src.buffer = buf; band.type = "bandpass"; band.frequency.value = 4000; band.Q.value = 0.8;
+  gain.gain.setValueAtTime(0.5, audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.5);
+  src.connect(band).connect(gain).connect(audio.destination);
+  src.start();
+}
+
+// Squeaky toy: a quick pitch sweep up and back down.
+function squeak() {
+  if (!audio) return;
+  const osc = audio.createOscillator(), gain = audio.createGain(), t = audio.currentTime;
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(900, t);
+  osc.frequency.exponentialRampToValueAtTime(1900, t + 0.08);
+  osc.frequency.exponentialRampToValueAtTime(1200, t + 0.2);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(t); osc.stop(t + 0.25);
+}
+
+// Reload by itself when index.html changes, so the always-on screen picks up updates.
+let pageVersion = null, polls = 0;
+async function checkForUpdate() {
+  const v = (await fetch("index.html", { method: "HEAD", cache: "no-store" })).headers.get("Last-Modified");
+  if (pageVersion && v !== pageVersion) location.reload();
+  pageVersion = v;
+}
+
+async function poll() {
+  if (polls++ % 10 === 0) checkForUpdate().catch(() => {});
+  try {
+    const now = await (await fetch("now.json?" + Date.now())).json();
+    const fresh = Date.now() / 1000 - now.at < 30;   // ignore old events when the page first opens
+    if (now.id !== lastId) {
+      if (lastId !== null && fresh && SHOW_FOR[now.action]) show(now.action);
+      lastId = now.id;
+    }
+  } catch (e) { /* no now.json yet: the brain hasn't acted */ }
+}
+
+function start() {
+  document.getElementById("start")?.remove();
+  setInterval(poll, 1000); poll();
+}
+
+// start.sh opens this page in a Chrome window that may play sound without a tap: start right away.
+// In a normal browser window sound needs one tap first, so show the "Tap to start" screen.
+audio = new AudioContext();
+if (audio.state === "running") start();
+document.getElementById("start").onclick = () => {
+  audio.resume();
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  start();
+};
+
+// Demo buttons. The Voice button also plays a real owner clip here in the browser
+// (in normal use the brain plays the clip itself, so this is only for demos).
+async function playOwnerClip() {
+  const html = await (await fetch("voices/")).text();
+  const clips = [...html.matchAll(/href="([^"]+\.(?:m4a|mp3|wav|aiff?))"/gi)].map(m => m[1]);
+  if (clips.length) new Audio("voices/" + clips[Math.floor(Math.random() * clips.length)]).play();
+}
+document.querySelectorAll("#demo button").forEach(b => b.onclick = () => {
+  show(b.dataset.scene);
+  if (b.dataset.scene === "voice") playOwnerClip();
+});
+
+let sleepTimer = null;
+["mousemove", "touchstart"].forEach(ev => document.addEventListener(ev, () => {
+  document.body.classList.add("awake");
+  clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => document.body.classList.remove("awake"), 4000);
+}));
+
+document.addEventListener("keydown", e => {
+  const key = { "1": "voice", "2": "treat", "3": "ball", "4": "video", "0": "idle" }[e.key];
+  if (key) show(key);
+});
+</script>
+</body>
+</html>

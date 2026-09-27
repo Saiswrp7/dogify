@@ -1,0 +1,7 @@
+anthropic
+pyserial
+opencv-python
+sounddevice
+numpy
+requests
+pytest
